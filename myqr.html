@@ -4,79 +4,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QR Login (Fix)</title>
+  <title>QR Login Redirect</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f0f0;
-      margin: 0;
-      padding: 0;
+      background: #f9f9f9;
       text-align: center;
+      padding: 0;
+      margin: 0;
     }
     h2 {
-      margin-top: 20px;
+      margin: 20px;
     }
     #qr-reader {
       width: 100%;
       max-width: 400px;
       margin: 20px auto;
-      display: none;
-    }
-    #start-btn {
-      margin-top: 30px;
-      padding: 10px 20px;
-      font-size: 1rem;
-      cursor: pointer;
     }
   </style>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
-  <h2>Login dengan QR Code</h2>
-  <button id="start-btn">Mulai Pindai</button>
+  <h2>Scan QR untuk Login Mikrotik</h2>
   <div id="qr-reader"></div>
 
   <script>
-    const loginUrl = "http://10.5.50.1/login"; // Ganti dengan IP login Mikrotik Anda
+    const mikrotikLoginUrl = "http://10.10.2.1/login"; // Ganti jika perlu
 
-    document.getElementById("start-btn").addEventListener("click", function () {
-      const readerElem = document.getElementById("qr-reader");
-      readerElem.style.display = "block";
-      const html5QrCode = new Html5Qrcode("qr-reader");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        (text) => {
-          if (text.includes(":")) {
-            const [username, password] = text.split(":");
-            const form = document.createElement("form");
-            form.method = "post";
-            form.action = loginUrl;
-
-            const u = document.createElement("input");
-            u.type = "hidden";
-            u.name = "username";
-            u.value = username;
-
-            const p = document.createElement("input");
-            p.type = "hidden";
-            p.name = "password";
-            p.value = password;
-
-            form.appendChild(u);
-            form.appendChild(p);
-            document.body.appendChild(form);
-            html5QrCode.stop().then(() => {
-              form.submit();
-            });
-          }
-        },
-        (errorMsg) => {
-          console.warn("Scan gagal:", errorMsg);
+    const qr = new Html5Qrcode("qr-reader");
+    qr.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      (text) => {
+        if (text.includes(":")) {
+          const [username, password] = text.split(":");
+          const redirectUrl = mikrotikLoginUrl + "?username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password);
+          qr.stop().then(() => {
+            window.location.href = redirectUrl;
+          });
         }
-      ).catch((err) => {
-        alert("Gagal mengakses kamera: " + err);
-      });
+      },
+      (err) => {
+        // Do nothing on scan error
+      }
+    ).catch((err) => {
+      alert("Gagal membuka kamera: " + err);
     });
   </script>
 </body>
