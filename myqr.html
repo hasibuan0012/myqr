@@ -1,51 +1,44 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QR Login Redirect</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      text-align: center;
-      padding: 0;
-      margin: 0;
-    }
-    h2 {
-      margin: 20px;
-    }
-    #qr-reader {
-      width: 100%;
-      max-width: 400px;
-      margin: 20px auto;
-    }
-  </style>
+  <title>QR Login Hybrid</title>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    body { font-family: Arial; text-align: center; padding: 20px; }
+    #qr-reader { width: 100%; max-width: 400px; margin: 0 auto; }
+  </style>
 </head>
 <body>
-  <h2>Scan QR untuk Login Mikrotik</h2>
+  <h2>Scan QR untuk Login Hotspot</h2>
   <div id="qr-reader"></div>
 
   <script>
-    const mikrotikLoginUrl = "http://10.10.2.1/login"; // Ganti jika perlu
+    const mikrotikLoginUrl = "http://10.10.2.1/login";
 
-    const qr = new Html5Qrcode("qr-reader");
-    qr.start(
+    const scanner = new Html5Qrcode("qr-reader");
+    scanner.start(
       { facingMode: "environment" },
       { fps: 10, qrbox: 250 },
       (text) => {
-        if (text.includes(":")) {
+        let redirectUrl = "";
+
+        if (text.startsWith("http://") || text.startsWith("https://")) {
+          redirectUrl = text;
+        } else if (text.includes(":")) {
           const [username, password] = text.split(":");
-          const redirectUrl = mikrotikLoginUrl + "?username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password);
-          qr.stop().then(() => {
+          redirectUrl = mikrotikLoginUrl + "?username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password);
+        }
+
+        if (redirectUrl) {
+          scanner.stop().then(() => {
             window.location.href = redirectUrl;
           });
         }
       },
       (err) => {
-        // Do nothing on scan error
+        // Optional: console.warn("Scan error", err);
       }
     ).catch((err) => {
       alert("Gagal membuka kamera: " + err);
