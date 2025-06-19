@@ -8,85 +8,75 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      background: #f0f0f0;
       margin: 0;
       padding: 0;
       text-align: center;
     }
-    .container {
-      margin-top: 40px;
+    h2 {
+      margin-top: 20px;
     }
     #qr-reader {
       width: 100%;
       max-width: 400px;
-      margin: 0 auto;
+      margin: 20px auto;
+      display: none;
     }
-    .message {
-      margin-top: 20px;
-      font-size: 1em;
-      color: #333;
+    #start-btn {
+      margin-top: 30px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Scan QR Code</h2>
-    <div id="qr-reader"></div>
-    <p class="message">Arahkan kamera ke QR berisi <code>username:password</code></p>
-  </div>
+  <h2>Login dengan QR Code</h2>
+  <button id="start-btn">Mulai Pindai</button>
+  <div id="qr-reader"></div>
 
-  <!-- MD5 for CHAP login -->
-  <script src="https://cdn.jsdelivr.net/gh/emn178/js-md5/build/md5.min.js"></script>
-  <!-- QR Code Scanner -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script>
-    // Hardcoded CHAP values — these must be injected dynamically by Mikrotik if used from there
-    const chapId = ""; // Will be filled from scanned QR
-    const chapChallenge = ""; // Will be filled from scanned QR
-    const mikrotikLoginUrl = "http://10.10.2.1/login";
+    const loginUrl = "http://10.10.2.1/login"; // Ganti dengan IP login Mikrotik Anda
 
-    const html5QrCode = new Html5Qrcode("qr-reader");
-    html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      (decodedText) => {
-        const parts = decodedText.split(":");
-        if (parts.length >= 2) {
-          const username = parts[0];
-          const password = parts[1];
+    document.getElementById("start-btn").addEventListener("click", function () {
+      const readerElem = document.getElementById("qr-reader");
+      readerElem.style.display = "block";
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (text) => {
+          if (text.includes(":")) {
+            const [username, password] = text.split(":");
+            const form = document.createElement("form");
+            form.method = "post";
+            form.action = loginUrl;
 
-          // Create a form dynamically
-          const form = document.createElement("form");
-          form.method = "post";
-          form.action = mikrotikLoginUrl;
+            const u = document.createElement("input");
+            u.type = "hidden";
+            u.name = "username";
+            u.value = username;
 
-          const inputUsername = document.createElement("input");
-          inputUsername.type = "hidden";
-          inputUsername.name = "username";
-          inputUsername.value = username;
+            const p = document.createElement("input");
+            p.type = "hidden";
+            p.name = "password";
+            p.value = password;
 
-          const inputPassword = document.createElement("input");
-          inputPassword.type = "hidden";
-          inputPassword.name = "password";
-
-          // If CHAP ID and CHAP Challenge are empty, just submit raw password (fallback)
-          if (chapId && chapChallenge) {
-            inputPassword.value = md5(chapId + password + chapChallenge);
-          } else {
-            inputPassword.value = password;
+            form.appendChild(u);
+            form.appendChild(p);
+            document.body.appendChild(form);
+            html5QrCode.stop().then(() => {
+              form.submit();
+            });
           }
-
-          form.appendChild(inputUsername);
-          form.appendChild(inputPassword);
-          document.body.appendChild(form);
-          form.submit();
+        },
+        (errorMsg) => {
+          console.warn("Scan gagal:", errorMsg);
         }
-      },
-      (errorMessage) => {
-        // Silent error
-      }
-    ).catch(err => {
-      document.querySelector(".message").innerText = "Gagal membuka kamera: " + err;
+      ).catch((err) => {
+        alert("Gagal mengakses kamera: " + err);
+      });
     });
   </script>
 </body>
